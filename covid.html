@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>COVID-19 Visualisation</title>
+  <script src="https://d3js.org/d3.v6.min.js"></script>
+</head>
+<body>
+
+<script>
+  // Charger les données JSON
+  d3.json("data.json").then(function(data) {
+    console.log("Données chargées avec succès :", data);
+    
+    // Créer un conteneur SVG
+    var svg = d3.select("body").append("svg")
+      .attr("width", 800)
+      .attr("height", 600);
+
+    // Créer des échelles logarithmiques pour les axes X et Y
+    var xScale = d3.scaleLog().domain([1, d3.max(data, d => d.total_cases)]).range([0, 800]);
+    var yScale = d3.scaleLog().domain([1, d3.max(data, d => d.total_deaths)]).range([600, 0]);
+
+    // Créer les axes X et Y
+    var xAxis = d3.axisBottom(xScale);
+    var yAxis = d3.axisLeft(yScale);
+
+    svg.append("g")
+      .attr("transform", "translate(0,600)")
+      .call(xAxis);
+
+    svg.append("g")
+      .call(yAxis);
+
+    // Créer les triangles représentant les pays
+    var triangles = svg.selectAll("path")
+      .data(data)
+      .enter().append("path")
+      .attr("d", d3.symbol().type(d3.symbolTriangle))
+      .attr("transform", function(d) {
+        return "translate(" + xScale(d.total_cases) + "," + yScale(d.total_deaths) + ") rotate(" + (d.new_cases > 0 ? 0 : 180) + ")";
+      })
+      .attr("fill", function(d) { return getColor(d.continent); })
+      .attr("opacity", 0.5)
+      .on("mouseover", function(d) {
+        // Afficher l'infobulle au survol
+        d3.select("#tooltip")
+          .style("left", d3.event.pageX + "px")
+          .style("top", d3.event.pageY + "px")
+          .style("visibility", "visible")
+          .text(d.location);
+      })
+      .on("mouseout", function() {
+        // Masquer l'infobulle à la sortie du survol
+        d3.select("#tooltip").style("visibility", "hidden");
+      });
+
+    // Créer l'infobulle
+    d3.select("body").append("div")
+      .attr("id", "tooltip")
+      .style("position", "absolute")
+      .style("visibility", "hidden")
+      .style("background-color", "white")
+      .style("padding", "5px")
+      .style("border", "1px solid #ccc");
+
+    // Fonction pour obtenir la couleur en fonction du continent
+    function getColor(continent) {
+      var colorScale = d3.scaleOrdinal(d3.schemeCategory10);
+      return colorScale(continent);
+    }
+
+    // Ajouter la fonction de zoom et de pan
+    var zoom = d3.zoom()
+      .scaleExtent([1, 10])
+      .on("zoom", function() {
+        svg.attr("transform", d3.event.transform);
+      });
+
+    svg.call(zoom);
+
+  });
+</script>
+
+</body>
+</html>
